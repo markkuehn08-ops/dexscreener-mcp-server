@@ -109,6 +109,12 @@ Errors are returned in a standardized format with appropriate error codes and me
 
 For detailed API documentation, see [docs/api-reference.md](docs/api-reference.md).
 
+## Deployment
+
+The server runs over stdio by default (for Claude Desktop and similar
+clients). It can also run as a remote HTTP/SSE service, e.g. on Cloud Run —
+see [docs/deploy.md](docs/deploy.md).
+
 ## Development
 
 ### Project Structure

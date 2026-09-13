@@ -26,7 +26,7 @@ or run `gcloud run services add-iam-policy-binding` afterwards.
 
 ```bash
 export PROJECT_ID="<YOUR_GCP_PROJECT_ID>"
-export REPO="markkuehn08-ops/dexscreener-mcp-server"
+export REPO="opensvm/dexscreener-mcp-server"
 export POOL_NAME="github-pool"
 export PROVIDER_NAME="github-provider"
 export SA_NAME="github-actions-deployer"
@@ -92,7 +92,7 @@ gcloud iam workload-identity-pools providers create-oidc "${PROVIDER_NAME}" \
   --display-name="GitHub Actions Provider" \
   --issuer-uri="https://token.actions.githubusercontent.com" \
   --attribute-mapping="google.subject=assertion.sub,attribute.actor=assertion.actor,attribute.repository=assertion.repository" \
-  --attribute-condition="assertion.repository_owner == 'markkuehn08-ops'"
+  --attribute-condition="assertion.repository_owner == 'opensvm'"
 
 # Bind the GitHub repository to the service account
 gcloud iam service-accounts add-iam-policy-binding \

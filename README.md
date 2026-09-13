@@ -2,7 +2,7 @@
 
 An MCP server implementation for accessing the DexScreener API, providing real-time access to DEX pair data, token information, and market statistics across multiple blockchains.
 
-One-line install (automatically adds to Claude Desktop):
+One-line install for Claude Desktop on macOS:
 ```bash
 curl -L https://raw.githubusercontent.com/opensvm/dexscreener-mcp-server/main/install.sh | bash
 ```
@@ -21,8 +21,16 @@ Manual installation:
 ```bash
 npm install
 npm run build
+```
+
+Optional Claude Desktop setup:
+```bash
 npm run setup
 ```
+
+Additional client setup guides:
+- Claude Desktop, ChatGPT, Gemini, and NotebookLM: [docs/integrations.md](docs/integrations.md)
+- Remote deployment for hosted MCP clients: [docs/deploy.md](docs/deploy.md)
 
 ## Testing
 
@@ -114,6 +122,13 @@ For detailed API documentation, see [docs/api-reference.md](docs/api-reference.m
 The server runs over stdio by default (for Claude Desktop and similar
 clients). It can also run as a remote HTTP/SSE service, e.g. on Cloud Run —
 see [docs/deploy.md](docs/deploy.md).
+
+## Client Integrations
+
+- **Claude Desktop**: local stdio via `npm run setup` or manual config
+- **Gemini**: local stdio support via Gemini CLI config; hosted clients can use the remote MCP endpoint
+- **ChatGPT / OpenAI**: use the deployed remote MCP endpoint
+- **NotebookLM**: no first-party direct MCP client support; see integration notes in [docs/integrations.md](docs/integrations.md)
 
 ## Development
 

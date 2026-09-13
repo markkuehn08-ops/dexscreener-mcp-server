@@ -1,16 +1,21 @@
 # Deploying to Cloud Run
 
 This server speaks MCP over stdio by default (`build/index.js`), which is how
-Claude Desktop and other local MCP clients launch it. To run it as a remote
-service on Cloud Run, a second entrypoint (`build/http.js`) exposes the same
-tools over the MCP SSE transport:
+Claude Desktop, Gemini CLI, and other local MCP clients launch it. To run it as
+a remote service on Cloud Run, a second entrypoint (`build/http.js`) exposes
+the same tools over both modern and legacy MCP HTTP transports:
 
-- `GET /sse` — opens an SSE stream and hands the client a session id
-- `POST /messages?sessionId=...` — client -> server JSON-RPC messages
+- `POST /mcp`, `GET /mcp`, `DELETE /mcp` — Streamable HTTP
+- `GET /sse` — legacy SSE stream setup
+- `POST /messages?sessionId=...` — legacy SSE client -> server JSON-RPC messages
 - `GET /healthz` — plain health check
 
 The `Dockerfile` builds the TypeScript project and runs `node build/http.js`,
 listening on `$PORT` (Cloud Run sets this to `8080`).
+
+Hosted MCP clients such as ChatGPT/OpenAI integrations and remote Gemini
+setups should use the `/mcp` endpoint. Older SSE-based MCP clients can keep
+using `/sse` and `/messages`.
 
 By default the deployed service requires authenticated invocations (Cloud
 Run's default). If you want it publicly reachable, add

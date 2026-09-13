@@ -3,7 +3,7 @@
 # Exit on error
 set -e
 
-echo "🚀 Installing DexScreener MCP Server..."
+echo "🚀 Installing DexScreener MCP Server for Claude Desktop..."
 
 # Create MCP directory if it doesn't exist
 MCP_DIR="$HOME/Documents/Cline/MCP"
@@ -12,7 +12,7 @@ cd "$MCP_DIR"
 
 # Clone the repository
 echo "📦 Cloning repository..."
-git clone https://github.com/yourusername/dexscreener-mcp-server.git
+git clone https://github.com/markkuehn08-ops/dexscreener-mcp-server.git
 cd dexscreener-mcp-server
 
 # Install dependencies and build

@@ -13,8 +13,6 @@ env:
   GAR_LOCATION: us-central1
   REPOSITORY: dexscreener-mcp-images
   IMAGE_NAME: dexscreener-mcp-server
-  WIF_PROVIDER: ${{ secrets.GCP_WIF_PROVIDER || vars.GCP_WIF_PROVIDER }}
-  WIF_SERVICE_ACCOUNT: ${{ secrets.GCP_WIF_SERVICE_ACCOUNT || vars.GCP_WIF_SERVICE_ACCOUNT }}
 
 jobs:
   deploy:
@@ -30,6 +28,9 @@ jobs:
 
       - id: deploy-config
         name: Check deployment configuration
+        env:
+          WIF_PROVIDER: ${{ secrets.GCP_WIF_PROVIDER || vars.GCP_WIF_PROVIDER }}
+          WIF_SERVICE_ACCOUNT: ${{ secrets.GCP_WIF_SERVICE_ACCOUNT || vars.GCP_WIF_SERVICE_ACCOUNT }}
         run: |
           missing=()
           [[ -n "${PROJECT_ID}" ]] || missing+=("GCP_PROJECT_ID")
@@ -49,8 +50,8 @@ jobs:
         if: steps.deploy-config.outputs.configured == 'true'
         uses: google-github-actions/auth@v3
         with:
-          workload_identity_provider: ${{ env.WIF_PROVIDER }}
-          service_account: ${{ env.WIF_SERVICE_ACCOUNT }}
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER || vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_WIF_SERVICE_ACCOUNT || vars.GCP_WIF_SERVICE_ACCOUNT }}
 
       - name: Set up Cloud SDK
         if: steps.deploy-config.outputs.configured == 'true'

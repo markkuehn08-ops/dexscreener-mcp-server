@@ -26,21 +26,44 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      - id: deploy-config
+        name: Check deployment configuration
+        env:
+          WIF_PROVIDER: ${{ secrets.GCP_WIF_PROVIDER || vars.GCP_WIF_PROVIDER }}
+          WIF_SERVICE_ACCOUNT: ${{ secrets.GCP_WIF_SERVICE_ACCOUNT || vars.GCP_WIF_SERVICE_ACCOUNT }}
+        run: |
+          missing=()
+          [[ -n "${PROJECT_ID}" ]] || missing+=("GCP_PROJECT_ID")
+          [[ -n "${WIF_PROVIDER}" ]] || missing+=("GCP_WIF_PROVIDER")
+          [[ -n "${WIF_SERVICE_ACCOUNT}" ]] || missing+=("GCP_WIF_SERVICE_ACCOUNT")
+
+          if (( ${#missing[@]} > 0 )); then
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Skipping Cloud Run deployment because these GitHub Actions variables or secrets are missing: ${missing[*]}"
+            exit 0
+          fi
+
+          echo "configured=true" >> "$GITHUB_OUTPUT"
+
       - id: auth
         name: Authenticate to Google Cloud
+        if: steps.deploy-config.outputs.configured == 'true'
         uses: google-github-actions/auth@v3
         with:
-          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
-          service_account: ${{ secrets.GCP_WIF_SERVICE_ACCOUNT }}
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER || vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_WIF_SERVICE_ACCOUNT || vars.GCP_WIF_SERVICE_ACCOUNT }}
 
       - name: Set up Cloud SDK
+        if: steps.deploy-config.outputs.configured == 'true'
         uses: google-github-actions/setup-gcloud@v2
 
       - name: Configure Docker Authentication
+        if: steps.deploy-config.outputs.configured == 'true'
         run: |
           gcloud auth configure-docker ${{ env.GAR_LOCATION }}-docker.pkg.dev --quiet
 
       - name: Build and Push Image
+        if: steps.deploy-config.outputs.configured == 'true'
         run: |
           IMAGE_TAG="${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}"
           LATEST_TAG="${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:latest"
@@ -48,6 +71,7 @@ jobs:
           docker push --all-tags "${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}"
 
       - name: Deploy to Cloud Run
+        if: steps.deploy-config.outputs.configured == 'true'
         uses: google-github-actions/deploy-cloudrun@v2
         with:
           service: ${{ env.SERVICE_NAME }}

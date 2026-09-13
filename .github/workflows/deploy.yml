@@ -44,14 +44,16 @@ jobs:
           fi
 
           echo "configured=true" >> "$GITHUB_OUTPUT"
+          echo "wif_provider=${WIF_PROVIDER}" >> "$GITHUB_OUTPUT"
+          echo "wif_service_account=${WIF_SERVICE_ACCOUNT}" >> "$GITHUB_OUTPUT"
 
       - id: auth
         name: Authenticate to Google Cloud
         if: steps.deploy-config.outputs.configured == 'true'
         uses: google-github-actions/auth@v3
         with:
-          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER || vars.GCP_WIF_PROVIDER }}
-          service_account: ${{ secrets.GCP_WIF_SERVICE_ACCOUNT || vars.GCP_WIF_SERVICE_ACCOUNT }}
+          workload_identity_provider: ${{ steps.deploy-config.outputs.wif_provider }}
+          service_account: ${{ steps.deploy-config.outputs.wif_service_account }}
 
       - name: Set up Cloud SDK
         if: steps.deploy-config.outputs.configured == 'true'

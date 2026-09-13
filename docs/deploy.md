@@ -102,12 +102,14 @@ gcloud iam service-accounts add-iam-policy-binding \
 Settings -> Secrets and variables -> Actions:
 
 - Repository variable `GCP_PROJECT_ID`: your GCP project id
-- Repository secret `GCP_WIF_PROVIDER`: `${POOL_ID}/providers/${PROVIDER_NAME}`
+- Repository variable or secret `GCP_WIF_PROVIDER`: `${POOL_ID}/providers/${PROVIDER_NAME}`
   (format: `projects/<PROJECT_NUMBER>/locations/global/workloadIdentityPools/github-pool/providers/github-provider`)
-- Repository secret `GCP_WIF_SERVICE_ACCOUNT`: `${SA_NAME}@${PROJECT_ID}.iam.gserviceaccount.com`
+- Repository variable or secret `GCP_WIF_SERVICE_ACCOUNT`: `${SA_NAME}@${PROJECT_ID}.iam.gserviceaccount.com`
 
 ## 3. Workflow
 
 `.github/workflows/deploy.yml` builds the image, pushes it to Artifact
 Registry, and deploys it to Cloud Run on every push to `main` (or manually via
-`workflow_dispatch`).
+`workflow_dispatch`). If any required GitHub Actions configuration is missing,
+the workflow logs a warning and skips deployment instead of failing during the
+Google Cloud authentication step.

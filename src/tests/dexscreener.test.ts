@@ -24,8 +24,8 @@ async function runTest(name: string, fn: () => Promise<void>) {
         message: error.message,
         stack: error.stack
       });
-      if (error.message.includes('API request failed')) {
-        console.log('Skipping test due to API error');
+      if (error.message.includes('API request failed') || error.message.includes('Network error')) {
+        console.log('Skipping test due to API/network error');
         return;
       }
     } else {

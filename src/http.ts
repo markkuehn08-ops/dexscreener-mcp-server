@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { randomUUID } from 'node:crypto';
+import { randomUUID, timingSafeEqual } from 'node:crypto';
 import http, { type IncomingMessage, type ServerResponse } from 'node:http';
 import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
@@ -8,6 +8,10 @@ import { DexScreenerService } from './services/dexscreener.js';
 import { DexScreenerMcpServer } from './server.js';
 
 const PORT = Number(process.env.PORT) || 8080;
+
+// Optional bearer token for HTTP/SSE endpoints. If set, all requests must
+// include `Authorization: ****** Leave unset only for local testing.
+const MCP_AUTH_TOKEN = process.env.MCP_AUTH_TOKEN;
 
 const sseTransports = new Map<string, SSEServerTransport>();
 const streamableTransports = new Map<string, StreamableHTTPServerTransport>();
@@ -29,6 +33,34 @@ function writeJsonError(res: ServerResponse, statusCode: number, message: string
       id: null,
     }),
   );
+}
+
+function isAuthorized(req: IncomingMessage, res: ServerResponse): boolean {
+  if (!MCP_AUTH_TOKEN) {
+    return true;
+  }
+
+  const authHeader = req.headers['authorization'] ?? '';
+  const expectedPrefix = 'Bearer ';
+  if (
+    typeof authHeader !== 'string' ||
+    !authHeader.startsWith(expectedPrefix) ||
+    authHeader.length !== expectedPrefix.length + MCP_AUTH_TOKEN.length
+  ) {
+    res.writeHead(401, { 'Content-Type': 'text/plain', 'WWW-Authenticate': 'Bearer' });
+    res.end('Unauthorized');
+    return false;
+  }
+
+  const provided = Buffer.from(authHeader.slice(expectedPrefix.length), 'utf8');
+  const expected = Buffer.from(MCP_AUTH_TOKEN, 'utf8');
+  if (!timingSafeEqual(provided, expected)) {
+    res.writeHead(401, { 'Content-Type': 'text/plain', 'WWW-Authenticate': 'Bearer' });
+    res.end('Unauthorized');
+    return false;
+  }
+
+  return true;
 }
 
 async function readJsonBody(req: IncomingMessage): Promise<unknown> {
@@ -109,6 +141,9 @@ export function createHttpServer() {
     }
 
     if ((req.method === 'GET' || req.method === 'POST' || req.method === 'DELETE') && url.pathname === '/mcp') {
+      if (!isAuthorized(req, res)) {
+        return;
+      }
       try {
         await handleStreamableRequest(req, res);
       } catch (error) {
@@ -121,6 +156,9 @@ export function createHttpServer() {
     }
 
     if (req.method === 'GET' && url.pathname === '/sse') {
+      if (!isAuthorized(req, res)) {
+        return;
+      }
       const server = createMcpServer();
       const transport = new SSEServerTransport('/messages', res);
 
@@ -137,6 +175,9 @@ export function createHttpServer() {
     }
 
     if (req.method === 'POST' && url.pathname === '/messages') {
+      if (!isAuthorized(req, res)) {
+        return;
+      }
       const sessionId = url.searchParams.get('sessionId');
       const transport = sessionId ? sseTransports.get(sessionId) : undefined;
 

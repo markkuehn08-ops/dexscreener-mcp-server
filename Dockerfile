@@ -16,8 +16,13 @@ FROM node:22-slim
 WORKDIR /app
 ENV NODE_ENV=production
 COPY --from=package-manifest /app/package.json /app/package-lock.json ./
-RUN npm ci --omit=dev
+RUN npm ci --omit=dev && \
+    addgroup --system appgroup && \
+    adduser --system --ingroup appgroup appuser
 COPY --from=build /app/build ./build
+
+# Run as non-root user
+USER appuser
 
 ENV PORT=8080
 EXPOSE 8080

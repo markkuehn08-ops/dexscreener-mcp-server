@@ -17,10 +17,11 @@ Hosted MCP clients such as ChatGPT/OpenAI integrations and remote Gemini
 setups should use the `/mcp` endpoint. Older SSE-based MCP clients can keep
 using `/sse` and `/messages`.
 
-By default the deployed service requires authenticated invocations (Cloud
-Run's default). If you want it publicly reachable, add
-`--allow-unauthenticated` via the `flags` input on the `deploy-cloudrun` step,
-or run `gcloud run services add-iam-policy-binding` afterwards.
+The deployed service **requires authenticated invocations** and restricts
+ingress to internal and Cloud Load Balancing sources only. Do not add
+`--allow-unauthenticated` unless you fully understand the exposure, and always
+pair it with the `MCP_AUTH_TOKEN` environment variable so the MCP endpoints
+require a bearer token.
 
 ## 1. One-time GCP setup (run locally or in Cloud Shell)
 
@@ -110,6 +111,7 @@ Settings -> Secrets and variables -> Actions:
 - Repository variable or secret `GCP_WIF_PROVIDER`: `${POOL_ID}/providers/${PROVIDER_NAME}`
   (format: `projects/<PROJECT_NUMBER>/locations/global/workloadIdentityPools/github-pool/providers/github-provider`)
 - Repository variable or secret `GCP_WIF_SERVICE_ACCOUNT`: `${SA_NAME}@${PROJECT_ID}.iam.gserviceaccount.com`
+- (Optional but strongly recommended) Repository secret `MCP_AUTH_TOKEN`: a high-entropy bearer token that callers must pass in the `Authorization: ****** header for all MCP HTTP/SSE endpoints
 
 ## 3. Workflow
 

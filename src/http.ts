@@ -9,12 +9,13 @@ import { DexScreenerMcpServer } from './server.js';
 
 const PORT = Number(process.env.PORT) || 8080;
 
-// Optional bearer token for HTTP/SSE endpoints. If set, all requests must
-// include `Authorization: ****** Leave unset only for local testing.
-const MCP_AUTH_TOKEN = process.env.MCP_AUTH_TOKEN;
-
 const sseTransports = new Map<string, SSEServerTransport>();
 const streamableTransports = new Map<string, StreamableHTTPServerTransport>();
+
+function getAuthToken(): string | undefined {
+  // Read on every request so tests and runtime secret rotation can change it.
+  return process.env.MCP_AUTH_TOKEN;
+}
 
 function createMcpServer() {
   const dexService = new DexScreenerService();
@@ -36,7 +37,8 @@ function writeJsonError(res: ServerResponse, statusCode: number, message: string
 }
 
 function isAuthorized(req: IncomingMessage, res: ServerResponse): boolean {
-  if (!MCP_AUTH_TOKEN) {
+  const authToken = getAuthToken();
+  if (!authToken) {
     return true;
   }
 
@@ -45,7 +47,7 @@ function isAuthorized(req: IncomingMessage, res: ServerResponse): boolean {
   if (
     typeof authHeader !== 'string' ||
     !authHeader.startsWith(expectedPrefix) ||
-    authHeader.length !== expectedPrefix.length + MCP_AUTH_TOKEN.length
+    authHeader.length !== expectedPrefix.length + authToken.length
   ) {
     res.writeHead(401, { 'Content-Type': 'text/plain', 'WWW-Authenticate': 'Bearer' });
     res.end('Unauthorized');
@@ -53,7 +55,7 @@ function isAuthorized(req: IncomingMessage, res: ServerResponse): boolean {
   }
 
   const provided = Buffer.from(authHeader.slice(expectedPrefix.length), 'utf8');
-  const expected = Buffer.from(MCP_AUTH_TOKEN, 'utf8');
+  const expected = Buffer.from(authToken, 'utf8');
   if (!timingSafeEqual(provided, expected)) {
     res.writeHead(401, { 'Content-Type': 'text/plain', 'WWW-Authenticate': 'Bearer' });
     res.end('Unauthorized');
@@ -196,12 +198,22 @@ export function createHttpServer() {
   });
 }
 
-const httpServer = createHttpServer();
+export function startHttpServer(port?: number): http.Server {
+  const listenPort = port ?? (Number(process.env.PORT) || 8080);
+  const httpServer = createHttpServer();
 
-httpServer.listen(PORT, () => {
-  console.error(`DexScreener MCP server listening on port ${PORT}`);
-});
+  httpServer.listen(listenPort, () => {
+    console.error(`DexScreener MCP server listening on port ${listenPort}`);
+  });
 
-process.on('SIGTERM', () => {
-  httpServer.close(() => process.exit(0));
-});
+  process.on('SIGTERM', () => {
+    httpServer.close(() => process.exit(0));
+  });
+
+  return httpServer;
+}
+
+// Auto-start only when this module is the entry point (not when imported for tests)
+if (import.meta.url.endsWith(process.argv[1] ?? '')) {
+  startHttpServer();
+}

@@ -3,3 +3,11 @@ build
 *.log
 .env*
 .git
+.github
+*.md
+docs
+patches
+.vscode
+.idea
+*.swp
+*.swo

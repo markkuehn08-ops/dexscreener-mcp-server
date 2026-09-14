@@ -17,6 +17,8 @@
     "watch": "tsc --watch",
     "inspector": "npx @modelcontextprotocol/inspector build/index.js",
     "test": "node --no-warnings --loader ts-node/esm --experimental-specifier-resolution=node src/tests/dexscreener.test.ts",
+    "test:http-auth": "node --no-warnings --loader ts-node/esm --experimental-specifier-resolution=node src/tests/http-auth.test.ts",
+    "test:all": "npm run test && npm run test:http-auth",
     "test:watch": "nodemon --exec 'npm test' --ext ts",
     "start": "node build/index.js",
     "start:http": "node build/http.js",
@@ -26,7 +28,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.30.0",
-    "axios": "^1.7.9",
+    "axios": "^1.8.3",
     "zod": "^4.6.4"
   },
   "devDependencies": {

@@ -12,7 +12,7 @@ cd "$MCP_DIR"
 
 # Clone the repository
 echo "📦 Cloning repository..."
-git clone https://github.com/markkuehn08-ops/dexscreener-mcp-server.git
+git clone https://github.com/opensvm/dexscreener-mcp-server.git
 cd dexscreener-mcp-server
 
 # Install dependencies and build

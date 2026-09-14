@@ -79,3 +79,7 @@ jobs:
           service: ${{ env.SERVICE_NAME }}
           region: ${{ env.REGION }}
           image: ${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          # Require authenticated invocations and restrict ingress to internal/load-balancer sources.
+          flags: --no-allow-unauthenticated --ingress=internal-and-cloud-load-balancing
+          env_vars: |
+            NODE_ENV=production

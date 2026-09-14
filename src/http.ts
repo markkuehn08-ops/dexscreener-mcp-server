@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { randomUUID } from 'node:crypto';
+import { randomUUID, timingSafeEqual } from 'node:crypto';
 import http, { type IncomingMessage, type ServerResponse } from 'node:http';
 import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
@@ -11,6 +11,11 @@ const PORT = Number(process.env.PORT) || 8080;
 
 const sseTransports = new Map<string, SSEServerTransport>();
 const streamableTransports = new Map<string, StreamableHTTPServerTransport>();
+
+function getAuthToken(): string | undefined {
+  // Read on every request so tests and runtime secret rotation can change it.
+  return process.env.MCP_AUTH_TOKEN;
+}
 
 function createMcpServer() {
   const dexService = new DexScreenerService();
@@ -29,6 +34,35 @@ function writeJsonError(res: ServerResponse, statusCode: number, message: string
       id: null,
     }),
   );
+}
+
+function isAuthorized(req: IncomingMessage, res: ServerResponse): boolean {
+  const authToken = getAuthToken();
+  if (!authToken) {
+    return true;
+  }
+
+  const authHeader = req.headers['authorization'] ?? '';
+  const expectedPrefix = 'Bearer ';
+  if (
+    typeof authHeader !== 'string' ||
+    !authHeader.startsWith(expectedPrefix) ||
+    authHeader.length !== expectedPrefix.length + authToken.length
+  ) {
+    res.writeHead(401, { 'Content-Type': 'text/plain', 'WWW-Authenticate': 'Bearer' });
+    res.end('Unauthorized');
+    return false;
+  }
+
+  const provided = Buffer.from(authHeader.slice(expectedPrefix.length), 'utf8');
+  const expected = Buffer.from(authToken, 'utf8');
+  if (!timingSafeEqual(provided, expected)) {
+    res.writeHead(401, { 'Content-Type': 'text/plain', 'WWW-Authenticate': 'Bearer' });
+    res.end('Unauthorized');
+    return false;
+  }
+
+  return true;
 }
 
 async function readJsonBody(req: IncomingMessage): Promise<unknown> {
@@ -109,6 +143,9 @@ export function createHttpServer() {
     }
 
     if ((req.method === 'GET' || req.method === 'POST' || req.method === 'DELETE') && url.pathname === '/mcp') {
+      if (!isAuthorized(req, res)) {
+        return;
+      }
       try {
         await handleStreamableRequest(req, res);
       } catch (error) {
@@ -121,6 +158,9 @@ export function createHttpServer() {
     }
 
     if (req.method === 'GET' && url.pathname === '/sse') {
+      if (!isAuthorized(req, res)) {
+        return;
+      }
       const server = createMcpServer();
       const transport = new SSEServerTransport('/messages', res);
 
@@ -137,6 +177,9 @@ export function createHttpServer() {
     }
 
     if (req.method === 'POST' && url.pathname === '/messages') {
+      if (!isAuthorized(req, res)) {
+        return;
+      }
       const sessionId = url.searchParams.get('sessionId');
       const transport = sessionId ? sseTransports.get(sessionId) : undefined;
 
@@ -155,12 +198,22 @@ export function createHttpServer() {
   });
 }
 
-const httpServer = createHttpServer();
+export function startHttpServer(port?: number): http.Server {
+  const listenPort = port ?? (Number(process.env.PORT) || 8080);
+  const httpServer = createHttpServer();
 
-httpServer.listen(PORT, () => {
-  console.error(`DexScreener MCP server listening on port ${PORT}`);
-});
+  httpServer.listen(listenPort, () => {
+    console.error(`DexScreener MCP server listening on port ${listenPort}`);
+  });
 
-process.on('SIGTERM', () => {
-  httpServer.close(() => process.exit(0));
-});
+  process.on('SIGTERM', () => {
+    httpServer.close(() => process.exit(0));
+  });
+
+  return httpServer;
+}
+
+// Auto-start only when this module is the entry point (not when imported for tests)
+if (import.meta.url.endsWith(process.argv[1] ?? '')) {
+  startHttpServer();
+}
